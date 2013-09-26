@@ -27,6 +27,10 @@
 	<string>480369938658210</string>
 	<key>FacebookDisplayName</key>
 	<string>Friend Smash!</string>
+	<key>ParseApplicationId</key>
+	<string>nyS2xUKKWlGPHf25HuUrLChxvFdIImFTgtHi65EX</string>
+	<key>ParseClientKey</key>
+	<string>PNs1JJVlpnOpdOXdkiEeO17maxyUXIl21TJTmrY3</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
