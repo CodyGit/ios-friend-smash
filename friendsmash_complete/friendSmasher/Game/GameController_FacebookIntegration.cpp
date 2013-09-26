@@ -17,6 +17,7 @@
 #include "GameController.h"
 #include <Social/Social.h>
 #include <Social/SLComposeViewController.h>
+#include <Parse/Parse.h>
 #include "SBJson.h"
 
 namespace FriendSmasher
@@ -26,12 +27,16 @@ namespace FriendSmasher
         
         static const u64 kuFBAppID = 480369938658210;
         
-        // Create a Facebook session for a given set of permissions
+        // Create a Facebook session for a given set of permissions.
+        //
+        // This method is now a no-op. The FBSession object is managed by PFFacebookUtils when
+        // using Facebook integration with Parse.
         void GameController::FB_CreateNewSession()
         {
             //m_kGameState = kGAMESTATE_FRONTSCREEN_NOSOCIAL_READY;
             //return;
-            
+ 
+
             FBSession* session = [[FBSession alloc] init];
             [FBSession setActiveSession: session];
         }
@@ -39,33 +44,35 @@ namespace FriendSmasher
         // Attempt to open the session - perhaps tabbing over to Facebook to authorise
         void GameController::FB_Login()
         {
-            
-            NSArray *permissions = [[NSArray alloc] initWithObjects:
-                                    @"email",
-                                    nil];
-            
-            // Attempt to open the session. If the session is not open, show the user the Facebook login UX
-            [FBSession openActiveSessionWithReadPermissions:permissions allowLoginUI:true completionHandler:^(FBSession *session,
-                                                                                                              FBSessionState status,
-                                                                                                              NSError *error)
-             {
-                // Did something go wrong during login? I.e. did the user cancel?
-                if (status == FBSessionStateClosedLoginFailed || status == FBSessionStateCreatedOpening) {
-             
-                    // If so, just send them round the loop again
-                    [[FBSession activeSession] closeAndClearTokenInformation];
-                    [FBSession setActiveSession:nil];
-                    FB_CreateNewSession();
-                }
-                else
-                {
-                    // Update our game now we've logged in
-                    if (m_kGameState == kGAMESTATE_FRONTSCREEN_LOGGEDOUT) {
-                        UpdateView(true);
-                }
-             }
-             
-             }];  
+          // Login to FB using Parse
+          
+          // The permissions requested from the user
+          NSArray *permissionsArray = @[ @"email" ];
+                    
+          // Login PFUser using Facebook
+          [PFFacebookUtils logInWithPermissions:permissionsArray block:^(PFUser *user, NSError *error) {
+           
+            if (!user) {
+              if (!error) {
+                NSLog(@"Uh oh. The user cancelled the Facebook login.");
+              } else {
+                NSLog(@"Uh oh. An error occurred: %@", error);
+              }
+            } else if (user.isNew) {
+              NSLog(@"User with facebook signed up and logged in!");
+              if (m_kGameState == kGAMESTATE_FRONTSCREEN_LOGGEDOUT) {
+                UpdateView(true);
+              }
+            } else {
+              NSLog(@"User with facebook logged in!");
+              if (m_kGameState == kGAMESTATE_FRONTSCREEN_LOGGEDOUT) {
+                UpdateView(true);
+              }
+            }
+           }];
+          
+      
+          
         }
         
         void GameController::FB_Customize()
@@ -183,24 +190,25 @@ namespace FriendSmasher
         
         void GameController::FB_RequestWritePermissions()
         {
-            // We need to request write permissions from Facebook
-            static bool bHaveRequestedPublishPermissions = false;
-            
-            if (!bHaveRequestedPublishPermissions)
-            {
-                NSArray *permissions = [[NSArray alloc] initWithObjects:
-                                        @"publish_actions", nil];
-                
-                [[FBSession activeSession] requestNewPublishPermissions:permissions defaultAudience:FBSessionDefaultAudienceFriends completionHandler:^(FBSession *session, NSError *error) {
-                    NSLog(@"Reauthorized with publish permissions.");
-                 }];
-                
-        
-                
-                bHaveRequestedPublishPermissions = true;
-            }
-            
-            
+
+          // We need to request write permissions from Facebook
+          static bool bHaveRequestedPublishPermissions = false;
+
+          if (!bHaveRequestedPublishPermissions)
+          {
+
+          [PFFacebookUtils reauthorizeUser:[PFUser currentUser]
+                    withPublishPermissions:@[@"publish_stream"]
+                                  audience:FBSessionDefaultAudienceFriends
+                                     block:^(BOOL succeeded, NSError *error) {
+           if (succeeded) {
+            // Your app now has publishing permissions for the user
+              NSLog(@"Reauthorized with publish permissions.");
+              bHaveRequestedPublishPermissions = true;
+           }
+           }];
+          }
+                  
         }
         
         void GameController::FB_SendScore(const int nScore)
