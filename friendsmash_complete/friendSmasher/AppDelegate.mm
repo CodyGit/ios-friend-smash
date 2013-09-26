@@ -15,6 +15,7 @@
  */
 
 #import "AppDelegate.h"
+#import <Parse/Parse.h>
 
 @implementation AppDelegate
 
@@ -28,7 +29,14 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-    return YES;
+  NSString *parseAppId = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"ParseApplicationId"];
+  NSString *parseClientKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"ParseClientKey"];
+  
+  [Parse setApplicationId:parseAppId clientKey:parseClientKey];
+  [PFAnalytics trackAppOpenedWithLaunchOptions:launchOptions];
+  [PFFacebookUtils initializeFacebook];
+  
+  return YES;
 }
 
 
@@ -36,16 +44,8 @@
             openURL:(NSURL *)url
   sourceApplication:(NSString *)sourceApplication
          annotation:(id)annotation {
-    
-    [FBAppCall handleOpenURL:url sourceApplication:sourceApplication fallbackHandler:^(FBAppCall *call) {
-      
-      if (call.appLinkData && call.appLinkData.targetURL) {
-        [[NSNotificationCenter defaultCenter] postNotificationName:APP_HANDLED_URL object:call.appLinkData.targetURL];
-      }
-      
-    }];
-    
-    return YES;
+  
+    return [PFFacebookUtils handleOpenURL:url];
 }
 
 							
@@ -79,7 +79,8 @@
 - (void)applicationWillTerminate:(UIApplication *)application
 {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
-    [[FBSession activeSession] close];
+  [[FBSession activeSession] close];
+
 }
 
 
